@@ -1,17 +1,19 @@
 import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { supabase, Equipment } from '../lib/supabase';
+import { supabase, Equipment, Kit } from '../lib/supabase';
 import { CheckCircle, Search } from 'lucide-react';
 
 interface KitFormProps {
   onSuccess: () => void;
+  initialData?: Kit;
+  isEditing?: boolean;
 }
 
-export default function KitForm({ onSuccess }: KitFormProps) {
+export default function KitForm({ onSuccess, initialData, isEditing = false }: KitFormProps) {
   const { profile } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
+    name: initialData?.name || '',
+    description: initialData?.description || '',
   });
   const [allEquipment, setAllEquipment] = useState<Equipment[]>([]);
   const [selectedEquipment, setSelectedEquipment] = useState<string[]>([]);
@@ -22,6 +24,9 @@ export default function KitForm({ onSuccess }: KitFormProps) {
 
   useEffect(() => {
     loadEquipment();
+    if (isEditing && initialData) {
+      loadKitEquipment();
+    }
   }, []);
 
   const loadEquipment = async () => {
@@ -32,6 +37,18 @@ export default function KitForm({ onSuccess }: KitFormProps) {
 
     if (!error && data) {
       setAllEquipment(data);
+    }
+  };
+
+  const loadKitEquipment = async () => {
+    if (!initialData) return;
+    const { data, error } = await supabase
+      .from('kit_equipment')
+      .select('equipment_id')
+      .eq('kit_id', initialData.id);
+
+    if (!error && data) {
+      setSelectedEquipment(data.map(ke => ke.equipment_id));
     }
   };
 
@@ -64,37 +81,67 @@ export default function KitForm({ onSuccess }: KitFormProps) {
         throw new Error('Selecione pelo menos um equipamento para o kit');
       }
 
-      const { data: kitData, error: kitError } = await supabase
-        .from('kits')
-        .insert([
-          {
+      if (isEditing && initialData) {
+        const { error: kitError } = await supabase
+          .from('kits')
+          .update({
             name: formData.name,
             description: formData.description,
-            created_by: profile.id,
-          },
-        ])
-        .select()
-        .single();
+          })
+          .eq('id', initialData.id);
 
-      if (kitError) throw kitError;
+        if (kitError) throw kitError;
 
-      const kitEquipmentData = selectedEquipment.map(equipmentId => ({
-        kit_id: kitData.id,
-        equipment_id: equipmentId,
-      }));
+        const { error: deleteError } = await supabase
+          .from('kit_equipment')
+          .delete()
+          .eq('kit_id', initialData.id);
 
-      const { error: equipmentError } = await supabase
-        .from('kit_equipment')
-        .insert(kitEquipmentData);
+        if (deleteError) throw deleteError;
 
-      if (equipmentError) throw equipmentError;
+        const kitEquipmentData = selectedEquipment.map(equipmentId => ({
+          kit_id: initialData.id,
+          equipment_id: equipmentId,
+        }));
+
+        const { error: equipmentError } = await supabase
+          .from('kit_equipment')
+          .insert(kitEquipmentData);
+
+        if (equipmentError) throw equipmentError;
+      } else {
+        const { data: kitData, error: kitError } = await supabase
+          .from('kits')
+          .insert([
+            {
+              name: formData.name,
+              description: formData.description,
+              created_by: profile.id,
+            },
+          ])
+          .select()
+          .single();
+
+        if (kitError) throw kitError;
+
+        const kitEquipmentData = selectedEquipment.map(equipmentId => ({
+          kit_id: kitData.id,
+          equipment_id: equipmentId,
+        }));
+
+        const { error: equipmentError } = await supabase
+          .from('kit_equipment')
+          .insert(kitEquipmentData);
+
+        if (equipmentError) throw equipmentError;
+      }
 
       setSuccess(true);
       setTimeout(() => {
         onSuccess();
       }, 1500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Erro ao criar kit');
+      setError(err instanceof Error ? err.message : isEditing ? 'Erro ao editar kit' : 'Erro ao criar kit');
     } finally {
       setLoading(false);
     }
@@ -105,7 +152,7 @@ export default function KitForm({ onSuccess }: KitFormProps) {
       {success && (
         <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-          <p className="text-green-800 text-sm">Kit criado com sucesso!</p>
+          <p className="text-green-800 text-sm">{isEditing ? 'Kit atualizado com sucesso!' : 'Kit criado com sucesso!'}</p>
         </div>
       )}
 
@@ -218,7 +265,7 @@ export default function KitForm({ onSuccess }: KitFormProps) {
             disabled={loading || success}
             className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Criando...' : success ? 'Criado!' : 'Criar Kit'}
+            {loading ? (isEditing ? 'Atualizando...' : 'Criando...') : success ? (isEditing ? 'Atualizado!' : 'Criado!') : (isEditing ? 'Atualizar Kit' : 'Criar Kit')}
           </button>
           <button
             type="button"

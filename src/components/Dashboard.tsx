@@ -149,7 +149,27 @@ export default function Dashboard() {
                 Criar Kit
               </button>
             </div>
-            <KitList onReserveClick={() => setCurrentView('reserve')} />
+            <KitList
+              onReserveClick={() => setCurrentView('reserve')}
+              onEditClick={(kit) => {
+                setSelectedKitForEdit(kit);
+                setCurrentView('edit-kit');
+              }}
+            />
+          </div>
+        )}
+
+        {currentView === 'edit-kit' && selectedKitForEdit && (
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Editar Kit</h2>
+            <KitForm
+              onSuccess={() => {
+                setCurrentView('kits');
+                setSelectedKitForEdit(null);
+              }}
+              initialData={selectedKitForEdit}
+              isEditing={true}
+            />
           </div>
         )}
 
