@@ -1,4 +1,5 @@
-import { Package, Box, Calendar, ShoppingCart, Bell, User, Home } from 'lucide-react';
+import { Package, Calendar, ShoppingCart, Bell, User, Home, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 
 interface SidebarProps {
   currentView: string;
@@ -6,18 +7,26 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
+  const [expandEquipment, setExpandEquipment] = useState(
+    currentView === 'equipment' || currentView === 'kits' || currentView === 'add-equipment' || currentView === 'add-kit'
+  );
+
   const menuItems = [
     { id: 'home', label: 'Início', icon: Home },
-    { id: 'equipment', label: 'Todos os Equipamentos', icon: Package, parent: 'Equipamentos' },
-    { id: 'kits', label: 'Kits', icon: Box, parent: 'Equipamentos' },
     { id: 'calendar', label: 'Calendário', icon: Calendar },
     { id: 'purchase', label: 'Solicitar Compra', icon: ShoppingCart },
     { id: 'notifications', label: 'Notificações', icon: Bell },
     { id: 'profile', label: 'Perfil', icon: User },
   ];
 
-  const equipmentItems = menuItems.filter(item => item.parent === 'Equipamentos');
-  const mainItems = menuItems.filter(item => !item.parent);
+  const equipmentSubItems = [
+    { id: 'equipment', label: 'Todos os Equipamentos' },
+    { id: 'kits', label: 'Kits' },
+  ];
+
+  const handleEquipmentClick = (subItemId: string) => {
+    onViewChange(subItemId);
+  };
 
   return (
     <aside className="w-64 bg-white border-r border-slate-200 min-h-screen fixed left-0 top-0 flex flex-col">
@@ -33,29 +42,9 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
 
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-1">
-          {mainItems.map((item) => {
-            if (item.id === 'equipment') return null;
-
+          {menuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
-
-            if (item.id === 'home') {
-              return (
-                <li key={item.id}>
-                  <button
-                    onClick={() => onViewChange(item.id)}
-                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition ${
-                      isActive
-                        ? 'bg-blue-50 text-blue-600'
-                        : 'text-slate-700 hover:bg-slate-50'
-                    }`}
-                  >
-                    <Icon className="w-5 h-5 flex-shrink-0" />
-                    <span>{item.label}</span>
-                  </button>
-                </li>
-              );
-            }
 
             return (
               <li key={item.id}>
@@ -75,33 +64,45 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
           })}
 
           <li className="pt-2">
-            <div className="px-4 py-2">
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                Equipamentos
-              </p>
-            </div>
-            <ul className="space-y-1">
-              {equipmentItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = currentView === item.id;
+            <button
+              onClick={() => setExpandEquipment(!expandEquipment)}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition ${
+                expandEquipment || currentView === 'equipment' || currentView === 'kits'
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <Package className="w-5 h-5 flex-shrink-0" />
+              <span>Equipamentos</span>
+              <ChevronDown
+                className={`w-4 h-4 ml-auto flex-shrink-0 transition-transform ${
+                  expandEquipment ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
 
-                return (
-                  <li key={item.id}>
-                    <button
-                      onClick={() => onViewChange(item.id)}
-                      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition ${
-                        isActive
-                          ? 'bg-blue-50 text-blue-600'
-                          : 'text-slate-700 hover:bg-slate-50'
-                      }`}
-                    >
-                      <Icon className="w-5 h-5 flex-shrink-0" />
-                      <span>{item.label}</span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+            {expandEquipment && (
+              <ul className="space-y-1 mt-1 ml-2 border-l-2 border-slate-200">
+                {equipmentSubItems.map((item) => {
+                  const isActive = currentView === item.id;
+
+                  return (
+                    <li key={item.id}>
+                      <button
+                        onClick={() => handleEquipmentClick(item.id)}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-600 ml-1'
+                            : 'text-slate-700 hover:bg-slate-50 ml-1'
+                        }`}
+                      >
+                        <span className="text-sm">{item.label}</span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </li>
         </ul>
       </nav>
