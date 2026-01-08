@@ -64,7 +64,14 @@ export default function Dashboard() {
       <div className="flex-1 ml-64">
         <nav className="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
           <div className="px-8 py-4">
-            <div className="flex justify-end items-center">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => setCurrentView('reserve')}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition"
+              >
+                <Plus className="w-4 h-4" />
+                Criar Reserva
+              </button>
               <div className="flex items-center gap-4">
                 {profile?.photo_url && (
                   <img
@@ -133,7 +140,13 @@ export default function Dashboard() {
                 Cadastrar Equipamento
               </button>
             </div>
-            <EquipmentList onReserveClick={() => setCurrentView('reserve')} />
+            <EquipmentList
+              onReserveClick={() => setCurrentView('reserve')}
+              onEditClick={(equipment) => {
+                setSelectedEquipmentForEdit(equipment);
+                setCurrentView('edit-equipment');
+              }}
+            />
           </div>
         )}
 
@@ -191,6 +204,20 @@ export default function Dashboard() {
           <div>
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Cadastrar Novo Equipamento</h2>
             <EquipmentForm onSuccess={() => setCurrentView('equipment')} />
+          </div>
+        )}
+
+        {currentView === 'edit-equipment' && selectedEquipmentForEdit && (
+          <div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">Editar Equipamento</h2>
+            <EquipmentForm
+              onSuccess={() => {
+                setCurrentView('equipment');
+                setSelectedEquipmentForEdit(null);
+              }}
+              initialData={selectedEquipmentForEdit}
+              isEditing={true}
+            />
           </div>
         )}
 

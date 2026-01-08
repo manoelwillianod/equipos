@@ -8,7 +8,7 @@ interface SidebarProps {
 
 export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
   const [expandEquipment, setExpandEquipment] = useState(
-    currentView === 'equipment' || currentView === 'kits' || currentView === 'add-equipment' || currentView === 'add-kit'
+    currentView === 'equipment' || currentView === 'kits' || currentView === 'add-equipment' || currentView === 'add-kit' || currentView === 'edit-equipment' || currentView === 'edit-kit'
   );
 
   const menuItems = [
@@ -67,7 +67,7 @@ export default function Sidebar({ currentView, onViewChange }: SidebarProps) {
             <button
               onClick={() => setExpandEquipment(!expandEquipment)}
               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg font-medium transition ${
-                expandEquipment || currentView === 'equipment' || currentView === 'kits'
+                expandEquipment || currentView === 'equipment' || currentView === 'kits' || currentView === 'add-equipment' || currentView === 'edit-equipment' || currentView === 'add-kit' || currentView === 'edit-kit'
                   ? 'bg-blue-50 text-blue-600'
                   : 'text-slate-700 hover:bg-slate-50'
               }`}

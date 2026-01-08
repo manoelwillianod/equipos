@@ -1,19 +1,23 @@
 import { useState, useEffect } from 'react';
 import { supabase, Kit, Equipment } from '../lib/supabase';
-import { Box, Calendar } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Box, Calendar, Edit2, Trash2 } from 'lucide-react';
 
 interface KitListProps {
   onReserveClick: () => void;
+  onEditClick?: (kit: Kit) => void;
 }
 
 interface KitWithEquipment extends Kit {
   equipment: Equipment[];
 }
 
-export default function KitList({ onReserveClick }: KitListProps) {
+export default function KitList({ onReserveClick, onEditClick }: KitListProps) {
+  const { profile } = useAuth();
   const [kits, setKits] = useState<KitWithEquipment[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedKit, setSelectedKit] = useState<KitWithEquipment | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
     loadKits();
@@ -72,6 +76,19 @@ export default function KitList({ onReserveClick }: KitListProps) {
         return 'bg-blue-100 text-blue-800';
       default:
         return 'bg-slate-100 text-slate-800';
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await supabase.from('kits').delete().eq('id', id);
+      setKits(kits.filter(k => k.id !== id));
+      setDeleteConfirm(null);
+      if (selectedKit?.id === id) {
+        setSelectedKit(null);
+      }
+    } catch (err) {
+      console.error('Erro ao deletar:', err);
     }
   };
 
@@ -179,18 +196,63 @@ export default function KitList({ onReserveClick }: KitListProps) {
                   </div>
                 )}
               </div>
-              {getKitStatus(selectedKit) === 'disponível' && (
-                <button
-                  onClick={() => {
-                    setSelectedKit(null);
-                    onReserveClick();
-                  }}
-                  className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
-                >
-                  <Calendar className="w-5 h-5" />
-                  Reservar Kit Completo
-                </button>
-              )}
+              <div className="flex gap-2">
+                {getKitStatus(selectedKit) === 'disponível' && (
+                  <button
+                    onClick={() => {
+                      setSelectedKit(null);
+                      onReserveClick();
+                    }}
+                    className="flex-1 flex items-center justify-center gap-2 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+                  >
+                    <Calendar className="w-5 h-5" />
+                    Reservar
+                  </button>
+                )}
+                {profile?.id === selectedKit.created_by && onEditClick && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setSelectedKit(null);
+                        onEditClick(selectedKit);
+                      }}
+                      className="flex-1 flex items-center justify-center gap-2 bg-slate-600 text-white py-3 rounded-lg font-semibold hover:bg-slate-700 transition"
+                    >
+                      <Edit2 className="w-5 h-5" />
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => setDeleteConfirm(selectedKit.id)}
+                      className="px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
+          <div className="bg-white rounded-lg p-6 max-w-sm">
+            <h3 className="text-lg font-semibold text-slate-900 mb-3">Confirmar exclusão</h3>
+            <p className="text-slate-600 mb-6">Tem certeza que deseja excluir este kit? Esta ação não pode ser desfeita.</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition"
+              >
+                Deletar
+              </button>
             </div>
           </div>
         </div>
