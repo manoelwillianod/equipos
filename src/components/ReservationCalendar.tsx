@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase, Reservation, Equipment, Kit, Profile } from '../lib/supabase';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Package } from 'lucide-react';
+import PickupEquipment from './PickupEquipment';
 
 interface ReservationWithDetails extends Reservation {
   equipment?: Equipment;
@@ -13,6 +14,8 @@ export default function ReservationCalendar() {
   const [reservations, setReservations] = useState<ReservationWithDetails[]>([]);
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [pickupReservations, setPickupReservations] = useState<ReservationWithDetails[]>([]);
 
   useEffect(() => {
     loadReservations();
@@ -85,6 +88,25 @@ export default function ReservationCalendar() {
 
   const nextMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  };
+
+  const isPickupEligible = (reservation: ReservationWithDetails) => {
+    if (reservation.status !== 'agendado') return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const startDate = new Date(reservation.start_date);
+    startDate.setHours(0, 0, 0, 0);
+    return startDate <= today;
+  };
+
+  const handlePickupClick = (reservation: ReservationWithDetails) => {
+    setPickupReservations([reservation]);
+    setShowPickupModal(true);
+  };
+
+  const handlePickupComplete = () => {
+    loadReservations();
+    setShowPickupModal(false);
   };
 
   const days = getDaysInMonth();
@@ -170,40 +192,60 @@ export default function ReservationCalendar() {
                 <p className="text-slate-600">Nenhuma reserva para esta data</p>
               ) : (
                 <div className="space-y-3">
-                  {selectedDateReservations.map((reservation) => (
-                    <div
-                      key={reservation.id}
-                      className="p-4 bg-slate-50 rounded-lg"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-slate-900">
-                            {reservation.equipment?.name || reservation.kits?.name}
-                          </p>
-                          <p className="text-sm text-slate-600">
-                            Por: {reservation.profiles?.full_name}
-                          </p>
+                  {selectedDateReservations.map((reservation) => {
+                    const isEligible = isPickupEligible(reservation);
+                    return (
+                      <div
+                        key={reservation.id}
+                        className="p-4 bg-slate-50 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div>
+                            <p className="font-semibold text-slate-900">
+                              {reservation.equipment?.name || reservation.kits?.name}
+                            </p>
+                            <p className="text-sm text-slate-600">
+                              Por: {reservation.profiles?.full_name}
+                            </p>
+                          </div>
+                          <span className={`px-2 py-1 rounded text-xs font-medium ${
+                            reservation.status === 'agendado' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {reservation.status}
+                          </span>
                         </div>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          reservation.status === 'agendado' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {reservation.status}
-                        </span>
+                        <p className="text-sm text-slate-600 mb-2">
+                          {new Date(reservation.start_date).toLocaleDateString('pt-BR')} até{' '}
+                          {new Date(reservation.end_date).toLocaleDateString('pt-BR')}
+                        </p>
+                        <p className="text-sm text-slate-700 mb-3">
+                          <span className="font-medium">Motivo:</span> {reservation.reason}
+                        </p>
+                        {isEligible && (
+                          <button
+                            onClick={() => handlePickupClick(reservation)}
+                            className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 transition"
+                          >
+                            <Package className="w-4 h-4" />
+                            Retirar Agora
+                          </button>
+                        )}
                       </div>
-                      <p className="text-sm text-slate-600 mb-2">
-                        {new Date(reservation.start_date).toLocaleDateString('pt-BR')} até{' '}
-                        {new Date(reservation.end_date).toLocaleDateString('pt-BR')}
-                      </p>
-                      <p className="text-sm text-slate-700">
-                        <span className="font-medium">Motivo:</span> {reservation.reason}
-                      </p>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
           )}
         </>
+      )}
+
+      {showPickupModal && (
+        <PickupEquipment
+          reservations={pickupReservations}
+          onClose={() => setShowPickupModal(false)}
+          onComplete={handlePickupComplete}
+        />
       )}
     </div>
   );
